@@ -192,13 +192,14 @@ async def consumer(db, consumer_index):
             result_json.update({
                 sub_key: sub_result_json.get(sub_key)  
             })
-        if sub_type_count < sub_type_num:
-            update_dict.update({'status': 2})
-            logger.warning('sub res count not enough, do nothon...')
 
         # result_json is empty then do nothing and continue
         if not result_json:
             continue
+
+        if sub_type_count < sub_type_num:
+            update_dict.update({'status': 2})
+            logger.warning('sub res count not enough, do nothon...')
 
         # result_json is valid
         query_dict2 = {'_id': document_oid}
