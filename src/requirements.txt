@@ -1,0 +1,4 @@
+aiofiles==0.3.2
+asyncio==3.4.3
+motor==1.2.0
+pymongo==3.6.0
