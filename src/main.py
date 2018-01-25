@@ -19,7 +19,7 @@ from pymongo.errors import DuplicateKeyError
 from mylog import setup_logger
 import config
 
-logger = setup_logger(logger_name='parser_sub_res', logger_path='log')
+logger = setup_logger(logger_name='main', logger_path='log')
 
 RET_SUCCESS = 200
 DEFAULT_SUB_TYPE_NUM = 14
@@ -223,8 +223,6 @@ async def consumer(db, consumer_index):
         else:
             logger.error('update id {} error'.format(fbid))
         
-        break
-        
             # save_list.append(document)
 
             # save url to file
@@ -242,7 +240,7 @@ async def consumer(db, consumer_index):
 
 def main():
     db = mongo_test()
-    concurrency = 1
+    concurrency = 400
     # concurrency = 1
     # filepaths = ['data',]
     # tasks = [asyncio.ensure_future(get_files(filepaths, concurrency)),]
