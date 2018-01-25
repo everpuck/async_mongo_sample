@@ -1,0 +1,6 @@
+src/config.py
+.env/*
+.vscode/*
+log/*
+src/__pycache__/*
+temp_update_res

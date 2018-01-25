@@ -22,6 +22,7 @@ import config
 logger = setup_logger(logger_name='parser_sub_res', logger_path='log')
 
 RET_SUCCESS = 200
+DEFAULT_SUB_TYPE_NUM = 14
 # SUFIX = datetime.now().strftime('%Y_%m_%d_%H_%M_%S')
 # FAIL_FILE = "fail_file_" + SUFIX
 # DONE_FILE = "done_file_" + SUFIX
@@ -142,11 +143,10 @@ async def consumer(db, consumer_index):
     save_list = []
     count = 5
     while True:
-
         # document = await mongo_find_one(
         #     db, config.DB_PEOPLE_COL, {}, {'crawl_fbid': 1})
         document = await mongo_find_and_modify(
-            db, config.DB_PEOPLE_LAST_COL, {},
+            db, config.DB_PEOPLE_LAST_COL, {'status': 0},
             {'status': -1}, {'crawl_fbid': 1, 'task_batch': 1})
             # {'status': 11}, {'crawl_fbid': 1, 'sub_type_num': })
         if document is None:
@@ -157,16 +157,18 @@ async def consumer(db, consumer_index):
         else:
             count = 5
 
-        fbid = int(document.get('crawl_fbid'))
-        document_oid = document.get('_id')
         task_batch = document.get('task_batch')
         if not task_batch:
             continue
-        print(task_batch)
+
+        fbid = int(document.get('crawl_fbid'))
+        document_oid = document.get('_id')
 	
-        print(document_oid)
-        print(fbid)
+        logger.info(
+            'get document oid: {0}, fbid: {1} from mongo'.format(
+                str(document_oid), fbid))
         # sub_type_num = decument.get('sub_type_num') 
+        sub_type_num = DEFAULT_SUB_TYPE_NUM 
         update_dict = {'status': 1}
         result_json = {}
 
@@ -176,51 +178,52 @@ async def consumer(db, consumer_index):
             # {'crawl_fbid': {'$in':[fbid, str(fbid)]}}):
             sub_result_json = sub_res.get('result_json')
             sub_key = sub_res.get('sub_type')
-            print(sub_key)
 
             res_status = sub_res.get('status', -1)
             sub_type_count += 1
-            # if res_status != RET_SUCCESS:
-            #     update_dict.update({'status': -1})
-            #     result_json = {}
-            #     break
+            if res_status != RET_SUCCESS and res_status != 402\
+                and res_status != 403:
+                update_dict.update({'status': -1})
+                logger.warning(
+                    'sub type: {0} error status: {1} continue'.format(
+                        sub_key, res_status))
+                result_json = {}
+                break
             result_json.update({
                 sub_key: sub_result_json.get(sub_key)  
             })
-        # if sub_type_count < sub_type_num:
-        #     result_json = {}
-        #     logger.warning('sub res count not enough, do nothon...')
+        if sub_type_count < sub_type_num:
+            upda
+            logger.warning('sub res count not enough, do nothon...')
 
         # result_json is empty then do nothing and continue
         if not result_json:
-            print(121231231)
-            continue
+            update_dict.update({'status': 2})
 
         # result_json is valid
         query_dict2 = {'_id': document_oid}
         update_dict.update({
-            'status': 1,
             'result_json': result_json
             })
 
         # test
-        with open("temp_update_res", 'w') as f:
-            f.write(json.dumps(update_dict))
-
-        # test
-        break
+        # with open("temp_update_res", 'w') as f:
+        #     f.write(json.dumps(update_dict))
 
         for _ in range(3):
             ret = await mongo_update_one(
-                db, config.DB_PEOPLE_COL, query_dict2, update_dict)
+                db, config.DB_PEOPLE_LAST_COL, query_dict2, update_dict)
             if ret != 'error' and ret.get('nModified') == 1:
                 is_updated = True 
                 break
         if is_updated:
             # logger.info('finish update id {}'.format(fbid))
-            logger.info('finish update id {0} and people state {1}'.format(fbid,people_state))
+            logger.info('finish update id {0}'.format(fbid))
         else:
             logger.error('update id {} error'.format(fbid))
+        
+        break
+        
             # save_list.append(document)
 
             # save url to file
