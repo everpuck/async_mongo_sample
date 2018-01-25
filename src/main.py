@@ -143,11 +143,11 @@ async def consumer(db, consumer_index):
     count = 5
     while True:
 
-        document = await mongo_find_one(
-            db, config.DB_PEOPLE_COL, {}, {'crawl_fbid': 1})
-        # document = await mongo_find_and_modify(
-        #     db, config.DB_PEOPLE_COL,{'task_batch': 1},
-        #     {'status': -1}, {'crawl_fbid': 1})
+        # document = await mongo_find_one(
+        #     db, config.DB_PEOPLE_COL, {}, {'crawl_fbid': 1})
+        document = await mongo_find_and_modify(
+            db, config.DB_PEOPLE_LAST_COL, {},
+            {'status': -1}, {'crawl_fbid': 1, 'task_batch': 1})
             # {'status': 11}, {'crawl_fbid': 1, 'sub_type_num': })
         if document is None:
             count -= 1
@@ -159,6 +159,11 @@ async def consumer(db, consumer_index):
 
         fbid = int(document.get('crawl_fbid'))
         document_oid = document.get('_id')
+        task_batch = document.get('task_batch')
+        if not task_batch:
+            continue
+        print(task_batch)
+	
         print(document_oid)
         print(fbid)
         # sub_type_num = decument.get('sub_type_num') 
@@ -166,11 +171,13 @@ async def consumer(db, consumer_index):
         result_json = {}
 
         sub_type_count = 0
-        async for sub_res in db.config.DB_PEOPLE_SUB_COL.find(
-            # {'crawl_fbid': {'$in':[fbid, str(fbid)]}}):
+        async for sub_res in db[config.DB_PEOPLE_SUB_COL].find(
             {'crawl_fbid': fbid}):
+            # {'crawl_fbid': {'$in':[fbid, str(fbid)]}}):
             sub_result_json = sub_res.get('result_json')
             sub_key = sub_res.get('sub_type')
+            print(sub_key)
+
             res_status = sub_res.get('status', -1)
             sub_type_count += 1
             # if res_status != RET_SUCCESS:
@@ -186,6 +193,7 @@ async def consumer(db, consumer_index):
 
         # result_json is empty then do nothing and continue
         if not result_json:
+            print(121231231)
             continue
 
         # result_json is valid
